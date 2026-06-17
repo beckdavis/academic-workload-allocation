@@ -12,6 +12,8 @@
             --ink-muted: #9999b3;
             --surface: #ffffff;
             --border: #e4e4ef;
+            --border-strong: #c8c8de;
+            --surface-tint: #f0f0f8;
             --teal: #0d7377;
             --teal-light: #e0f4f4;
             --teal-mid: #14a085;
@@ -157,6 +159,23 @@
 
         select:focus { outline: none; border-color: var(--teal-mid); }
         select.invalid { border-color: #ef4444; background: var(--red-light); }
+
+        .auto-calc-box {
+            padding: 0.55rem 0.7rem;
+            border: 1.5px dashed var(--border-strong);
+            border-radius: var(--radius-sm);
+            background: var(--surface-tint);
+            font-size: 0.85rem;
+            color: var(--ink);
+        }
+
+        .auto-calc-note {
+            display: block;
+            font-size: 0.68rem;
+            color: var(--ink-muted);
+            font-weight: 400;
+            margin-top: 0.15rem;
+        }
 
         /* Tooltip */
         .info-btn {
@@ -304,6 +323,37 @@
         .footer p:last-child { margin-bottom: 0; }
         .footer a { color: var(--teal); text-decoration: underline; text-underline-offset: 2px; }
         .footer strong { color: var(--ink-soft); }
+
+        .footer-notes-title {
+            font-size: 0.62rem; font-weight: 700; letter-spacing: 0.05em;
+            text-transform: uppercase; color: var(--ink-soft); margin-bottom: 0.4rem;
+        }
+
+        .footer-notes { list-style: none; counter-reset: footnote; margin-bottom: 0.4rem; }
+
+        .footer-notes li {
+            counter-increment: footnote;
+            position: relative;
+            padding-left: 1.3rem;
+            font-size: 0.68rem;
+            color: var(--ink-muted);
+            line-height: 1.5;
+            margin-bottom: 0.35rem;
+        }
+
+        .footer-notes li:last-child { margin-bottom: 0; }
+
+        .footer-notes li::before {
+            content: counter(footnote);
+            position: absolute; left: 0; top: 0;
+            width: 0.9rem; height: 0.9rem;
+            border-radius: 50%;
+            background: var(--border);
+            color: var(--ink-soft);
+            font-size: 0.58rem; font-weight: 700;
+            display: flex; align-items: center; justify-content: center;
+        }
+
         .footer hr { border: none; border-top: 1px solid var(--border); margin: 0.5rem 0; }
     </style>
 </head>
@@ -380,6 +430,14 @@
                         <option value="scholarship">Scholarship</option>
                         <option value="service">Service</option>
                     </select>
+                </div>
+            </div>
+
+            <div class="input-group full hidden" id="twoCalcDisplay">
+                <label class="input-label">Second component allocation</label>
+                <div class="auto-calc-box">
+                    <span id="twoCalcLabel">Research</span>: <strong id="twoCalcValue">50%</strong>
+                    <span class="auto-calc-note">&#8212; calculated automatically so Teaching + Second = 100%</span>
                 </div>
             </div>
 
@@ -504,10 +562,14 @@
 
     <!-- Footer -->
     <div class="footer">
-        <p><strong>Note:</strong> Based on 1,725 annual hours for full-time academics, pro rata for part-time, as per the Academic Staff Enterprise Agreement 2023&#8211;2025.</p>
+        <div class="footer-notes-title">Notes</div>
+        <ol class="footer-notes">
+            <li>Calculations are based on 1,725 annual work hours for full-time academics, pro rata for part-time positions, as per the Academic Staff Enterprise Agreement 2023&#8211;2025.</li>
+            <li>A reminder: Service covers a range of administrative work that isn't always visible in TAT &#8212; including student consultations and aspects of course convenorship.</li>
+        </ol>
         <hr>
         <p style="font-style:italic;">Developed by Rebekah Davis, Griffith University, using Claude (Anthropic) as a development assistant.</p>
-        <p>v2.3 &nbsp;|&nbsp; March 2026 &nbsp;|&nbsp; <a href="mailto:directorqcad@griffith.edu.au?subject=Academic%20Workload%20Allocation%20Tool%20-%20Feedback" target="_blank">directorqcad@griffith.edu.au</a></p>
+        <p>v2.4 &nbsp;|&nbsp; March 2026 &nbsp;|&nbsp; <a href="mailto:directorqcad@griffith.edu.au?subject=Academic%20Workload%20Allocation%20Tool%20-%20Feedback" target="_blank">directorqcad@griffith.edu.au</a></p>
     </div>
 
 </div>
@@ -533,26 +595,17 @@
 
     function updateProfile() {
         var p = getProfile();
-        ['twoTypeGroup','researchGroup','scholarshipGroup','serviceGroup'].forEach(hideEl);
+        ['twoTypeGroup','twoCalcDisplay','researchGroup','scholarshipGroup','serviceGroup'].forEach(hideEl);
         if (p === 'three_research')    { showEl('researchGroup');    showEl('serviceGroup'); }
         if (p === 'three_scholarship') { showEl('scholarshipGroup'); showEl('serviceGroup'); }
         if (p === 'two') {
             showEl('twoTypeGroup');
-            syncTwoInputs();
+            showEl('twoCalcDisplay');
         }
         calculate();
     }
 
-    function syncTwoInputs() {
-        var t = document.getElementById('twoType').value;
-        ['researchGroup','scholarshipGroup','serviceGroup'].forEach(hideEl);
-        if (t === 'research')    showEl('researchGroup');
-        if (t === 'scholarship') showEl('scholarshipGroup');
-        if (t === 'service')     showEl('serviceGroup');
-    }
-
     function syncAndCalc() {
-        syncTwoInputs();
         calculate();
     }
 
@@ -621,6 +674,13 @@
         if (showR)  document.getElementById('bResearch').textContent    = research    + '%';
         if (showSc) document.getElementById('bScholarship').textContent = scholarship + '%';
         if (showSv) document.getElementById('bService').textContent     = service     + '%';
+
+        if (p === 'two') {
+            var rem2 = 100 - teaching;
+            var labelMap = { research: 'Research', scholarship: 'Scholarship', service: 'Service' };
+            document.getElementById('twoCalcLabel').textContent = labelMap[twoType];
+            document.getElementById('twoCalcValue').textContent = rem2.toFixed(0) + '%';
+        }
     }
 
     /* Mobile-friendly tooltip toggle */
